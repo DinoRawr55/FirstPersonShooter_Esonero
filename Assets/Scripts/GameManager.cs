@@ -15,208 +15,96 @@ public class GameManager : MonoBehaviour
     public int enemiesToKill = 6;
     private int enemiesKilled = 0;
 
+    private bool isPaused = false;
+    public Slider volumeSlider;
 
-
-    private bool isPaused = false;   //tiene traccia della pausa
-
-    public Slider volumeSlider;  //aggiungi lo slider per il volume
+    // Questa variabile "sopravvive" al caricamento della scena
+    private static bool shouldStartInGame = false;
 
     void Start()
     {
-        //all avvio mostra solo il menu principale
-        panelMain?.SetActive(true);
+        // Se abbiamo cliccato Restart, saltiamo il menu
+        if (shouldStartInGame)
+        {
+            panelMain?.SetActive(false);
+            Time.timeScale = 1f;
+            UpdateCursor(false);
+            shouldStartInGame = false; // Resetta per la prossima volta
+        }
+        else
+        {
+            panelMain?.SetActive(true);
+            Time.timeScale = 0f;
+            UpdateCursor(true);
+        }
+
         panelSettings?.SetActive(false);
         panelPause?.SetActive(false);
         panelDeath?.SetActive(false);
-        panelWin?.SetActive(false);  // Nascondi la schermata di vittoria inizialmente
-
-
-        Time.timeScale = 0f;
-
-        //mostra il cursore per cliccare i bottoni
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
-
-
-       
+        panelWin?.SetActive(false);
     }
 
     void Update()
     {
-        //esc pausa
-        if (Input.GetKeyDown(KeyCode.Escape) && Time.timeScale == 1f && (panelDeath == null || !panelDeath.activeSelf))
+        if (Input.GetKeyDown(KeyCode.Escape))
         {
-            TogglePause();
+            if (panelMain != null && !panelMain.activeSelf && !panelDeath.activeSelf && !panelWin.activeSelf)
+            {
+                TogglePause();
+            }
         }
     }
 
-    //start menu princ
     public void StartGame()
     {
         panelMain?.SetActive(false);
         Time.timeScale = 1f;
-
-        //cursore al centro
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
-
-
+        UpdateCursor(false);
     }
 
-    //quit
-    public void QuitGame()
+    // --- CORREZIONE RESTART ---
+    public void ReStartGameDIE() => ExecuteRestart();
+    public void ReStartGameWIN() => ExecuteRestart();
+
+    private void ExecuteRestart()
     {
-        Application.Quit();
-        Debug.Log("Sei uscito dal gioco");
-    }
-
-    //settings
-    public void OpenSettings()
-    {
-        panelMain?.SetActive(false);
-        panelSettings?.SetActive(true);
-
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
-    }
-
-    // BACK dal settings al menu principale
-    public void BackToMain()
-    {
-        panelSettings?.SetActive(false);
-        panelMain?.SetActive(true);
-
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
-    }
-
-    // BACK dal death to main menu
-    public void GofromDeathtoMain()
-    {
-        panelDeath?.SetActive(false);
-        panelMain?.SetActive(true);
-
-        //resetta tutto
+        shouldStartInGame = true; // Diciamo al prossimo Start() di saltare il menu
+        Time.timeScale = 1f;
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
-
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
     }
 
-    // BACK dal win to main menu
-    public void GofromWintoMain()
+    public void ReturnToMenu()
     {
-        panelWin?.SetActive(false);
-        panelMain?.SetActive(true);
-
-        //resetta tutto
+        shouldStartInGame = false;
+        Time.timeScale = 0f;
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
-
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
     }
 
-    //pausa
+    // Collega questi ai tasti "Torna al menu"
+    public void GofromDeathtoMain() => ReturnToMenu();
+    public void GofromWintoMain() => ReturnToMenu();
+    public void GofromPausetoMain() => ReturnToMenu();
+
+    // --- ALTRE FUNZIONI ---
+    public void OpenSettings() { panelMain?.SetActive(false); panelSettings?.SetActive(true); }
+    public void BackToMain() { panelSettings?.SetActive(false); panelMain?.SetActive(true); }
+    public void QuitGame() { Application.Quit(); }
+
     public void TogglePause()
     {
-        if (isPaused)
-        {
-            panelPause?.SetActive(false);
-            Time.timeScale = 1f;
-            isPaused = false;
-
-            //blocca il cursore
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
-        }
-        else
-        {
-            panelPause?.SetActive(true);
-            Time.timeScale = 0f;
-            isPaused = true;
-
-            //mostra il cursore
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
-        }
+        isPaused = !isPaused;
+        panelPause?.SetActive(isPaused);
+        Time.timeScale = isPaused ? 0f : 1f;
+        UpdateCursor(isPaused);
     }
 
-    //BACK dal pause to main menu
-    public void GofromPausetoMain()
+    public void GameOver() { panelDeath?.SetActive(true); Time.timeScale = 0f; UpdateCursor(true); }
+    public void EnemyKilled() { enemiesKilled++; if (enemiesKilled >= enemiesToKill) WinGame(); }
+    void WinGame() { panelWin?.SetActive(true); Time.timeScale = 0f; UpdateCursor(true); }
+
+    private void UpdateCursor(bool state)
     {
-        panelPause?.SetActive(false);
-        panelMain?.SetActive(true);
-
-        //ricarica la scena 
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
-
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
-    }
-
-    //gameover
-    public void GameOver()
-    {
-        panelDeath?.SetActive(true);
-        Time.timeScale = 0f;
-
-        //mostra il cursore
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
-
-        
-    }
-
-    //morte nemici
-    public void EnemyKilled()
-    {
-        enemiesKilled++;
-        Debug.Log("Nemici uccisi: " + enemiesKilled);
-
-        if (enemiesKilled >= enemiesToKill)
-        {
-            WinGame();
-        }
-    }
-
-    //vittoria
-    void WinGame()
-    {
-        panelWin?.SetActive(true);
-        Time.timeScale = 0f;
-
-        Cursor.lockState = CursorLockMode.None;
-        Cursor.visible = true;
-
-
-        Debug.Log("HAI VINTO!");
-
-      
-    }
-    public void ReStartGameDIE()
-    {
-        panelDeath?.SetActive(false);
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
-        Time.timeScale = 1f;
-
-        //cursore al centro
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
-
-
-    }
-    public void ReStartGameWIN()
-    {
-        panelWin?.SetActive(false);
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
-        Time.timeScale = 1f;
-
-        //cursore al centro
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
-
-
+        Cursor.lockState = state ? CursorLockMode.None : CursorLockMode.Locked;
+        Cursor.visible = state;
     }
 }
-
-
